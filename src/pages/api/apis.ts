@@ -11,33 +11,33 @@ interface AgentBase {
 }
 
 /**
- * @description 分析者 agent (kind = 0)
+ * @description Analyser agent (kind = 0)
  */
-interface AnalyseAgent extends AgentBase {
+export interface AnalyseAgent extends AgentBase {
     identity_setting: string
     task: string
 }
 
 /**
- * @description 评判者 agent (kind = 1)
+ * @description Judger agent (kind = 1)
  */
-interface JudgeAgent extends AgentBase {
+export interface JudgeAgent extends AgentBase {
     identity_setting: string
     task: string
     output: string[]
 }
 
 /**
- * @description 处理者 agent (kind = 2)
+ * @description Handler agent (kind = 2)
  */
-interface HandleAgent extends AgentBase {
+export interface HandleAgent extends AgentBase {
     deal: string
 }
 
 /**
- * @description 绘画者 agent (kind = 3)
+ * @description Painter agent (kind = 3)
  */
-interface PainterAgent extends AgentBase {
+export interface PainterAgent extends AgentBase {
     identity_setting: string
     style: string
 }
