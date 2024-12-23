@@ -12,6 +12,7 @@ interface RightPanelProps {
 export default function RightPanel({ onAgentAdd }: RightPanelProps) {
     const [agents, setAgents] = useState<Agent[]>([])
     const [showAddForm, setShowAddForm] = useState(false)
+    const [editAgent, setEditAgent] = useState<Agent | null>(null)
     const [selectedKind, setSelectedKind] = useState<number | null>(null)
 
     const groupedAgents = agents.reduce((acc, agent) => {
@@ -39,6 +40,7 @@ export default function RightPanel({ onAgentAdd }: RightPanelProps) {
                     key={kind}
                     kind={parseInt(kind)}
                     agents={agents}
+                    onEditAgent={(agent) => setEditAgent(agent)}
                 />
             ))}
 
@@ -56,11 +58,23 @@ export default function RightPanel({ onAgentAdd }: RightPanelProps) {
                     }}
                 />
             )}
+
+            {editAgent && (
+                <EditAgentForm
+                    agent={editAgent}
+                    onClose={() => setEditAgent(null)}
+                    onUpdate={(updatedAgent) => {
+                        const updatedAgents = agents.map(agent => agent.name === updatedAgent.name ? updatedAgent : agent)
+                        setAgents(updatedAgents)
+                        setEditAgent(null)
+                    }}
+                />
+            )}
         </div>
     )
 }
 
-function AgentGroup({ kind, agents }: { kind: number, agents: Agent[] }) {
+function AgentGroup({ kind, agents, onEditAgent }: { kind: number, agents: Agent[], onEditAgent: (agent: Agent) => void }) {
     const [isExpanded, setIsExpanded] = useState(true)
     const kindNames = ['Analyser', 'Judger', 'Handler', 'Painter']
 
@@ -75,7 +89,7 @@ function AgentGroup({ kind, agents }: { kind: number, agents: Agent[] }) {
             {isExpanded && (
                 <div className="space-y-2 mt-2">
                     {agents.map((agent) => (
-                        <AgentCard key={agent.name} agent={agent} />
+                        <AgentCard key={agent.name + agent.kind} agent={agent} onEdit={() => onEditAgent(agent)} />
                     ))}
                 </div>
             )}
@@ -83,11 +97,11 @@ function AgentGroup({ kind, agents }: { kind: number, agents: Agent[] }) {
     )
 }
 
-function AgentCard({ agent }: { agent: Agent }) {
+function AgentCard({ agent, onEdit }: { agent: Agent, onEdit: () => void }) {
     const { useDrag } = require('react-dnd')
     const [{ isDragging }, drag] = useDrag(() => ({
         type: 'AGENT',
-        item: { ...agent },  // 确保传递副本，避免引用问题
+        item: { ...agent },
         collect: (monitor) => ({
             isDragging: monitor.isDragging()
         })
@@ -97,6 +111,7 @@ function AgentCard({ agent }: { agent: Agent }) {
         <div
             ref={drag}
             className={`p-4 border rounded ${isDragging ? 'opacity-50' : ''}`}
+            onClick={onEdit}
         >
             <h3 className="font-bold">{agent.name}</h3>
             <p className="text-sm">{agent.description}</p>
@@ -124,16 +139,16 @@ function AddAgentForm({ onClose, onAdd }: { onClose: () => void, onAdd: (data: a
     useEffect(() => {
         switch (kindData.kind) {
             case 0:
-                setFormData({ ...formData, identity_setting: '', task: '' })
+                setFormData({ ...formData, kind: 0, identity_setting: '', task: '' })
                 break
             case 1:
-                setFormData({ ...formData, identity_setting: '', task: '', output: [] })
+                setFormData({ ...formData, kind: 1, identity_setting: '', task: '', output: [] })
                 break
             case 2:
-                setFormData({ ...formData, identity_setting: '', task: '' })
+                setFormData({ ...formData, kind: 2, identity_setting: '', task: '' })
                 break
             case 3:
-                setFormData({ ...formData, identity_setting: '', style: '' })
+                setFormData({ ...formData, kind: 3, identity_setting: '', style: '' })
                 break
             default:
                 break
@@ -141,7 +156,7 @@ function AddAgentForm({ onClose, onAdd }: { onClose: () => void, onAdd: (data: a
     }, [kindData.kind])
 
     const renderForm = () => {
-        switch (kindData.kind) {
+        switch (formData.kind) {
             case 0:
                 return <AnalyserForm formData={formData as Partial<AnalyseAgent>} setFormData={setFormData} />
             case 1:
@@ -155,7 +170,6 @@ function AddAgentForm({ onClose, onAdd }: { onClose: () => void, onAdd: (data: a
         }
     }
 
-
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
             <div className="bg-white p-4 rounded max-w-md w-full">
@@ -167,7 +181,7 @@ function AddAgentForm({ onClose, onAdd }: { onClose: () => void, onAdd: (data: a
                             onChange={e => {
                                 const newKind = Number(e.target.value)
                                 setKindData({ kind: newKind })
-                                setFormData({})
+                                setFormData({ ...formData, kind: newKind })
                             }}
                             className="w-full p-2 border rounded"
                         >
@@ -203,6 +217,63 @@ function AddAgentForm({ onClose, onAdd }: { onClose: () => void, onAdd: (data: a
                         </button>
                         <button onClick={() => onAdd(formData)} className="px-4 py-2 bg-blue-500 text-white rounded">
                             添加
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+function EditAgentForm({ agent, onClose, onUpdate }: { agent: Agent, onClose: () => void, onUpdate: (agent: Agent) => void }) {
+    const [formData, setFormData] = useState<Partial<AnalyseAgent | JudgeAgent | HandleAgent | PainterAgent>>({
+        ...agent
+    })
+
+    const renderForm = () => {
+        switch (formData.kind) {
+            case 0:
+                return <AnalyserForm formData={formData as Partial<AnalyseAgent>} setFormData={setFormData} />
+            case 1:
+                return <JudgerForm formData={formData as Partial<JudgeAgent>} setFormData={setFormData} />
+            case 2:
+                return <HandlerForm formData={formData as Partial<HandleAgent>} setFormData={setFormData} />
+            case 3:
+                return <PainterForm formData={formData as Partial<PainterAgent>} setFormData={setFormData} />
+            default:
+                return null
+        }
+    }
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <div className="bg-white p-4 rounded max-w-md w-full">
+                <div>
+                    <div className="mb-4">
+                        <label className="block mb-2">名称</label>
+                        <input
+                            type="text"
+                            value={formData.name || ''}
+                            onChange={e => setFormData({ ...formData, name: e.target.value })}
+                            className="w-full p-2 border rounded"
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label className="block mb-2">描述</label>
+                        <input
+                            type="text"
+                            value={formData.description || ''}
+                            onChange={e => setFormData({ ...formData, description: e.target.value })}
+                            className="w-full p-2 border rounded"
+                        />
+                    </div>
+                    {renderForm()}
+                    <div className="flex justify-end gap-2">
+                        <button type="button" onClick={onClose} className="px-4 py-2 border rounded">
+                            取消
+                        </button>
+                        <button onClick={() => onUpdate(formData)} className="px-4 py-2 bg-blue-500 text-white rounded">
+                            保存
                         </button>
                     </div>
                 </div>
