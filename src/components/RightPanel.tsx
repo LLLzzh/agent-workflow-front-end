@@ -4,6 +4,8 @@ import AnalyserForm from './Right/AnalyserForm'
 import JudgerForm from './Right/JudgerForm'
 import HandlerForm from './Right/HandlerForm'
 import PainterForm from './Right/PainterForm'
+import CenterPanel from './CenterPanel'
+import { v4 as uuidv4 } from 'uuid'
 
 interface RightPanelProps {
     onAgentAdd: (agent: Agent) => void
@@ -24,53 +26,58 @@ export default function RightPanel({ onAgentAdd }: RightPanelProps) {
     }, {} as Record<number, Agent[]>)
 
     return (
-        <div className="w-1/4 p-4">
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">Agent列表</h2>
-                <button
-                    onClick={() => setShowAddForm(true)}
-                    className="p-2 bg-green-500 text-white rounded-full"
-                >
-                    +
-                </button>
+        <>
+            <CenterPanel agents={agents} />
+            <div className="w-1/4 p-4">
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-bold">Agent列表</h2>
+                    <button
+                        onClick={() => setShowAddForm(true)}
+                        className="p-2 bg-green-500 text-white rounded-full"
+                    >
+                        +
+                    </button>
+                </div>
+
+                {Object.entries(groupedAgents).map(([kind, agents]) => (
+                    <AgentGroup
+                        key={kind}
+                        kind={parseInt(kind)}
+                        agents={agents}
+                        onEditAgent={(agent) => setEditAgent(agent)}
+                    />
+                ))}
+
+                {showAddForm && (
+                    <AddAgentForm
+                        onClose={() => setShowAddForm(false)}
+                        onAdd={async (data) => {
+                            const newAgent: Agent = {
+                                ...data,
+                                id: data.id || uuidv4(),
+                            }
+                            console.log('the form data is ' + JSON.stringify(data))
+                            setAgents([...agents, newAgent])
+                            onAgentAdd(newAgent)
+                            setShowAddForm(false)
+                        }}
+                    />
+                )}
+
+                {editAgent && (
+                    <EditAgentForm
+                        agent={editAgent}
+                        onClose={() => setEditAgent(null)}
+                        onUpdate={(updatedAgent) => {
+                            const updatedAgents = agents.map(agent => agent.id === updatedAgent.id ? updatedAgent : agent)
+                            setAgents(updatedAgents)
+                            setEditAgent(null)
+                            console.log(updatedAgent, "update form")
+                        }}
+                    />
+                )}
             </div>
-
-            {Object.entries(groupedAgents).map(([kind, agents]) => (
-                <AgentGroup
-                    key={kind}
-                    kind={parseInt(kind)}
-                    agents={agents}
-                    onEditAgent={(agent) => setEditAgent(agent)}
-                />
-            ))}
-
-            {showAddForm && (
-                <AddAgentForm
-                    onClose={() => setShowAddForm(false)}
-                    onAdd={async (data) => {
-                        const newAgent: Agent = {
-                            ...data,
-                        }
-                        console.log('the form data is ' + JSON.stringify(data))
-                        setAgents([...agents, newAgent])
-                        onAgentAdd(newAgent)
-                        setShowAddForm(false)
-                    }}
-                />
-            )}
-
-            {editAgent && (
-                <EditAgentForm
-                    agent={editAgent}
-                    onClose={() => setEditAgent(null)}
-                    onUpdate={(updatedAgent) => {
-                        const updatedAgents = agents.map(agent => agent.name === updatedAgent.name ? updatedAgent : agent)
-                        setAgents(updatedAgents)
-                        setEditAgent(null)
-                    }}
-                />
-            )}
-        </div>
+        </>
     )
 }
 
@@ -89,7 +96,7 @@ function AgentGroup({ kind, agents, onEditAgent }: { kind: number, agents: Agent
             {isExpanded && (
                 <div className="space-y-2 mt-2">
                     {agents.map((agent) => (
-                        <AgentCard key={agent.name + agent.kind} agent={agent} onEdit={() => onEditAgent(agent)} />
+                        <AgentCard key={agent.id} agent={agent} onEdit={() => onEditAgent(agent)} />
                     ))}
                 </div>
             )}
@@ -133,7 +140,8 @@ function AddAgentForm({ onClose, onAdd }: { onClose: () => void, onAdd: (data: a
         kind: kindData.kind,
         name: '',
         description: '',
-        avatar: ''
+        avatar: '',
+        id: uuidv4(),
     })
 
     useEffect(() => {
@@ -229,6 +237,7 @@ function EditAgentForm({ agent, onClose, onUpdate }: { agent: Agent, onClose: ()
     const [formData, setFormData] = useState<Partial<AnalyseAgent | JudgeAgent | HandleAgent | PainterAgent>>({
         ...agent
     })
+
 
     const renderForm = () => {
         switch (formData.kind) {

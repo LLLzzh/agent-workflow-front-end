@@ -1,62 +1,150 @@
-import { useDrop } from 'react-dnd'
+import { useState } from 'react'
+import { useDrop, useDrag } from 'react-dnd'
 import { Agent } from '@/pages/api/apis'
 
 interface CenterPanelProps {
-    sequence: Agent[]
-    setSequence: (agents: Agent[]) => void
-    onExecute: () => Promise<void>
+    agents: Agent[]
 }
 
-export default function CenterPanel({ sequence, setSequence, onExecute }: CenterPanelProps) {
-    const [{ isOver }, drop] = useDrop<Agent, void, { isOver: boolean }>(() => ({
+export default function CenterPanel({ agents }: CenterPanelProps) {
+    const [workflowAgents, setWorkflowAgents] = useState<Agent[]>([])
+    const [input, setInput] = useState('')
+    const [output, setOutput] = useState('')
+
+    // Handle dropping agents
+    const [{ isOver }, drop] = useDrop(() => ({
         accept: 'AGENT',
-        drop: (item: Agent, monitor) => {
-            const dropIndex = Math.floor(monitor.getClientOffset()?.y / 50)
-            const validIndex = Math.min(dropIndex, sequence.length)  // 保证 dropIndex 合理
-            const newSequence = [...sequence]
-            newSequence.splice(validIndex, 0, item)  // 插入到指定位置
-            setSequence(newSequence)
+        drop: (item: Agent) => {
+            // 使用回调函数确保获取最新的 workflowAgents 状态
+            setWorkflowAgents((prevAgents) => {
+                // 如果没有找到相同的 agent，则将其添加到工作流中
+                if (!prevAgents.some(agent => agent.id === item.id)) {
+                    return [...prevAgents, item]
+                } else {
+                    console.log(`Agent with id ${item.id} already exists in the workflow`)
+                    return prevAgents // 如果已存在，则返回原状态，不做修改
+                }
+            })
         },
         collect: (monitor) => ({
-            isOver: monitor.isOver(),
-        }),
+            isOver: monitor.isOver()
+        })
     }))
 
+
+    // Add agent to workflow
+    const addAgentToWorkflow = (agent: Agent) => {
+        setWorkflowAgents((prevAgents) => [...prevAgents, agent])
+    }
+
+    // Delete an agent from the workflow
+    const deleteAgent = (index: number) => {
+        setWorkflowAgents((prevAgents) => prevAgents.filter((_, i) => i !== index))
+    }
+
+    // Execute workflow
+    const executeWorkflow = async () => {
+        let currentInput = input
+        for (let i = 0; i < workflowAgents.length; i++) {
+            const agent = workflowAgents[i]
+            currentInput = await executeAgent(agent, currentInput)
+        }
+        setOutput(currentInput) // Final output after all agents have been executed
+    }
+
+    const executeAgent = async (agent: Agent, input: string) => {
+        return new Promise<string>((resolve) => {
+            setTimeout(() => {
+                console.log(`Agent ${agent.name} processed input: ${input}`)
+                resolve(`${input} -> Processed by ${agent.name}`)
+            }, 100)
+        })
+    }
+
     return (
-        <div ref={drop} className="flex-1 p-4 border-r">
+        <div ref={drop} className="flex flex-col p-4 w-3/4">
             <div className="mb-4">
-                <button
-                    onClick={onExecute}
-                    className="px-4 py-2 bg-blue-500 text-white rounded"
-                >
-                    执行
-                </button>
+                <h2 className="text-xl font-bold">我的工作流</h2>
+                <div className="border p-4 mt-2">
+                    <h3 className="font-semibold">Agent拖拽至此处</h3>
+                    <div className={`min-h-[200px] border-dashed border-2 ${isOver ? 'bg-gray-100' : ''}`}>
+                        {workflowAgents.length === 0 ? (
+                            <p className="text-center text-gray-500">请将Agent拖拽至此处</p>
+                        ) : (
+                            <div>
+                                {workflowAgents.map((agent, index) => (
+                                    <DraggableAgent
+                                        key={agent.id}  // Ensure unique key
+                                        index={index}
+                                        agent={agent}
+                                        deleteAgent={deleteAgent}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
-            <div className="space-y-2">
-                {sequence.map((agent, index) => (
-                    <AgentSequenceItem
-                        key={index}
-                        agent={agent}
-                        onRemove={() => {
-                            const newSequence = [...sequence]
-                            newSequence.splice(index, 1)
-                            setSequence(newSequence)
-                        }}
-                    />
-                ))}
+
+            {/* Input Section */}
+            <div className="mb-4">
+                <label className="block mb-2">输入</label>
+                <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    className="w-full p-2 border rounded"
+                />
             </div>
+
+            {/* Output Section */}
+            <div className="mb-4">
+                <label className="block mb-2">输出</label>
+                <textarea
+                    value={output}
+                    readOnly
+                    className="w-full p-2 border rounded"
+                />
+            </div>
+
+            {/* Execute Button */}
+            <button
+                onClick={executeWorkflow}
+                className="px-4 py-2 bg-blue-500 text-white rounded"
+            >
+                执行工作流
+            </button>
         </div>
     )
 }
 
-function AgentSequenceItem({ agent, onRemove }: { agent: Agent, onRemove: () => void }) {
+interface DraggableAgentProps {
+    agent: Agent
+    index: number
+    deleteAgent: (index: number) => void
+}
+
+function DraggableAgent({ agent, index, deleteAgent }: DraggableAgentProps) {
+    const [{ isDragging }, drag] = useDrag(() => ({
+        type: 'AGENT',
+        item: { index, id: agent.id }, // Ensure only the index and id are passed
+        collect: (monitor) => ({
+            isDragging: monitor.isDragging()
+        })
+    }), [agent.id, index])
+
     return (
-        <div className="p-4 border rounded flex justify-between items-center">
-            <div>
-                <h3 className="font-bold">{agent.name}</h3>
-                <p className="text-sm">{agent.description}</p>
-            </div>
-            <button onClick={onRemove} className="text-red-500">删除</button>
+        <div
+            ref={drag}
+            className={`flex justify-between items-center mb-2 p-2 border ${isDragging ? 'opacity-50' : ''}`}
+        >
+            <span>{agent.name}</span>
+            <button
+                onClick={() => deleteAgent(index)}
+                className="text-red-500 hover:text-red-700"
+            >
+                删除
+            </button>
         </div>
     )
 }

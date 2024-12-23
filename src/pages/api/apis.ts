@@ -4,6 +4,7 @@ import request from "@/pages/api/config"
  * @description agent 基础接口
  */
 interface AgentBase {
+    id: string
     name: string
     description: string
     avatar: string
