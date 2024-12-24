@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Agent, CreateAgentData, createAgent, AnalyseAgent, JudgeAgent, HandleAgent, PainterAgent } from '@/pages/api/apis'
+import { Agent, getAgentList, deleteAgent, updateAgent, createAgent, AnalyseAgent, JudgeAgent, HandleAgent, PainterAgent } from '@/pages/api/apis'
 import AnalyserForm from './Right/AnalyserForm'
-import JudgerForm from './Right/JudgerForm'
+import JudgeForm from './Right/JudgerForm'
 import HandlerForm from './Right/HandlerForm'
 import PainterForm from './Right/PainterForm'
 import CenterPanel from './CenterPanel'
-import { v4 as uuidv4 } from 'uuid'
 
 interface RightPanelProps {
     onAgentAdd: (agent: Agent) => void
@@ -15,7 +14,20 @@ export default function RightPanel({ onAgentAdd }: RightPanelProps) {
     const [agents, setAgents] = useState<Agent[]>([])
     const [showAddForm, setShowAddForm] = useState(false)
     const [editAgent, setEditAgent] = useState<Agent | null>(null)
-    const [selectedKind, setSelectedKind] = useState<number | null>(null)
+
+    const fetchData = async () => {
+        const allAgents: Agent[] = []
+        for(let i = 0; i < 4; i++){
+            const res = await getAgentList(i)
+            allAgents.push(...res.payload)
+        }
+        console.log(allAgents)
+        setAgents(allAgents)
+    }
+
+    useEffect(() => {
+        fetchData()
+    }, []);
 
     const groupedAgents = agents.reduce((acc, agent) => {
         if (!acc[agent.kind]) {
@@ -52,11 +64,12 @@ export default function RightPanel({ onAgentAdd }: RightPanelProps) {
                     <AddAgentForm
                         onClose={() => setShowAddForm(false)}
                         onAdd={async (data) => {
+                            const res = await createAgent(data)
                             const newAgent: Agent = {
                                 ...data,
-                                id: data.id || uuidv4(),
+                                id: res.payload
                             }
-                            console.log('the form data is ' + JSON.stringify(data))
+                            console.log('the full agent is'+JSON.stringify(newAgent))
                             setAgents([...agents, newAgent])
                             onAgentAdd(newAgent)
                             setShowAddForm(false)
@@ -68,14 +81,21 @@ export default function RightPanel({ onAgentAdd }: RightPanelProps) {
                     <EditAgentForm
                         agent={editAgent}
                         onClose={() => setEditAgent(null)}
-                        onUpdate={(updatedAgent) => {
-                            const updatedAgents = agents.map(agent => agent.id === updatedAgent.id ? updatedAgent : agent)
-                            setAgents(updatedAgents)
+                        onDelete={async (agent) => {
+                            await deleteAgent(agent.id)
+                            await fetchData()
                             setEditAgent(null)
-                            console.log(updatedAgent, "update form")
+                        }}
+                        onUpdate={async (updatedAgent) => {
+                            await updateAgent({...updatedAgent})
+                            await fetchData()
+                            onAgentAdd(updatedAgent)
+                            setEditAgent(null)
                         }}
                     />
                 )}
+
+
             </div>
         </>
     )
@@ -83,7 +103,7 @@ export default function RightPanel({ onAgentAdd }: RightPanelProps) {
 
 function AgentGroup({ kind, agents, onEditAgent }: { kind: number, agents: Agent[], onEditAgent: (agent: Agent) => void }) {
     const [isExpanded, setIsExpanded] = useState(true)
-    const kindNames = ['Analyser', 'Judger', 'Handler', 'Painter']
+    const kindNames = ['Analyser', 'Judge', 'Handler', 'Painter']
 
     return (
         <div className="mb-4">
@@ -121,7 +141,7 @@ function AgentCard({ agent, onEdit }: { agent: Agent, onEdit: () => void }) {
             onClick={onEdit}
         >
             <h3 className="font-bold">{agent.name}</h3>
-            <p className="text-sm">{agent.description}</p>
+            <p className="text-sm overflow-hidden max-w-full">{agent.description}</p>
         </div>
     )
 }
@@ -131,7 +151,7 @@ function AddAgentForm({ onClose, onAdd }: { onClose: () => void, onAdd: (data: a
 
     const kindOptions = [
         { value: 0, label: 'Analyser' },
-        { value: 1, label: 'Judger' },
+        { value: 1, label: 'Judge' },
         { value: 2, label: 'Handler' },
         { value: 3, label: 'Painter' }
     ]
@@ -141,7 +161,6 @@ function AddAgentForm({ onClose, onAdd }: { onClose: () => void, onAdd: (data: a
         name: '',
         description: '',
         avatar: '',
-        id: uuidv4(),
     })
 
     useEffect(() => {
@@ -168,7 +187,7 @@ function AddAgentForm({ onClose, onAdd }: { onClose: () => void, onAdd: (data: a
             case 0:
                 return <AnalyserForm formData={formData as Partial<AnalyseAgent>} setFormData={setFormData} />
             case 1:
-                return <JudgerForm formData={formData as Partial<JudgeAgent>} setFormData={setFormData} />
+                return <JudgeForm formData={formData as Partial<JudgeAgent>} setFormData={setFormData} />
             case 2:
                 return <HandlerForm formData={formData as Partial<HandleAgent>} setFormData={setFormData} />
             case 3:
@@ -233,7 +252,7 @@ function AddAgentForm({ onClose, onAdd }: { onClose: () => void, onAdd: (data: a
     )
 }
 
-function EditAgentForm({ agent, onClose, onUpdate }: { agent: Agent, onClose: () => void, onUpdate: (agent: Agent) => void }) {
+function EditAgentForm({ agent, onClose, onUpdate, onDelete }: { agent: Agent, onClose: () => void, onUpdate: (agent: Agent) => void, onDelete: (agent: Agent) => void }) {
     const [formData, setFormData] = useState<Partial<AnalyseAgent | JudgeAgent | HandleAgent | PainterAgent>>({
         ...agent
     })
@@ -244,7 +263,7 @@ function EditAgentForm({ agent, onClose, onUpdate }: { agent: Agent, onClose: ()
             case 0:
                 return <AnalyserForm formData={formData as Partial<AnalyseAgent>} setFormData={setFormData} />
             case 1:
-                return <JudgerForm formData={formData as Partial<JudgeAgent>} setFormData={setFormData} />
+                return <JudgeForm formData={formData as Partial<JudgeAgent>} setFormData={setFormData} />
             case 2:
                 return <HandlerForm formData={formData as Partial<HandleAgent>} setFormData={setFormData} />
             case 3:
@@ -253,6 +272,7 @@ function EditAgentForm({ agent, onClose, onUpdate }: { agent: Agent, onClose: ()
                 return null
         }
     }
+
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
@@ -278,6 +298,9 @@ function EditAgentForm({ agent, onClose, onUpdate }: { agent: Agent, onClose: ()
                     </div>
                     {renderForm()}
                     <div className="flex justify-end gap-2">
+                        <button type="button" onClick={()=>onDelete(formData)} className="px-4 py-2 border-red-500 text-red-500 rounded">
+                            删除
+                        </button>
                         <button type="button" onClick={onClose} className="px-4 py-2 border rounded">
                             取消
                         </button>

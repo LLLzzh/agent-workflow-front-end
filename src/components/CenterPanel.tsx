@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import { useDrop, useDrag } from 'react-dnd'
-import { Agent } from '@/pages/api/apis'
+import { Agent,callAgent } from '@/pages/api/apis'
+import analyserImg from '@/assets/analyser.png'
+import judgeImg from '@/assets/judge.png'
+import handlerImg from '@/assets/handler.png'
+import painterImg from '@/assets/painter.png'
+
 
 interface CenterPanelProps {
     agents: Agent[]
@@ -15,7 +20,7 @@ export default function CenterPanel({ agents }: CenterPanelProps) {
     const [{ isOver }, drop] = useDrop(() => ({
         accept: 'AGENT',
         drop: (item: Agent) => {
-            // 使用回调函数确保获取最新的 workflowAgents 状态
+            // 确保获取最新的 workflowAgents 状态
             setWorkflowAgents((prevAgents) => {
                 // 如果没有找到相同的 agent，则将其添加到工作流中
                 if (!prevAgents.some(agent => agent.id === item.id)) {
@@ -32,17 +37,12 @@ export default function CenterPanel({ agents }: CenterPanelProps) {
     }))
 
 
-    // Add agent to workflow
-    const addAgentToWorkflow = (agent: Agent) => {
-        setWorkflowAgents((prevAgents) => [...prevAgents, agent])
-    }
-
-    // Delete an agent from the workflow
+    // 删除agent
     const deleteAgent = (index: number) => {
         setWorkflowAgents((prevAgents) => prevAgents.filter((_, i) => i !== index))
     }
 
-    // Execute workflow
+    // 执行工作流
     const executeWorkflow = async () => {
         let currentInput = input
         for (let i = 0; i < workflowAgents.length; i++) {
@@ -53,7 +53,14 @@ export default function CenterPanel({ agents }: CenterPanelProps) {
     }
 
     const executeAgent = async (agent: Agent, input: string) => {
-        return new Promise<string>((resolve) => {
+        return new Promise<string>(async (resolve) => {
+            const res = await callAgent({
+                id: agent.id,
+                kind: agent.kind,
+                text: input
+            })
+            console.log ('the result of executing agent',agent.name,'is',res)
+
             setTimeout(() => {
                 console.log(`Agent ${agent.name} processed input: ${input}`)
                 resolve(`${input} -> Processed by ${agent.name}`)
@@ -74,7 +81,7 @@ export default function CenterPanel({ agents }: CenterPanelProps) {
                             <div>
                                 {workflowAgents.map((agent, index) => (
                                     <DraggableAgent
-                                        key={agent.id}  // Ensure unique key
+                                        key={agent.id}
                                         index={index}
                                         agent={agent}
                                         deleteAgent={deleteAgent}
@@ -86,7 +93,7 @@ export default function CenterPanel({ agents }: CenterPanelProps) {
                 </div>
             </div>
 
-            {/* Input Section */}
+            {/*Input*/}
             <div className="mb-4">
                 <label className="block mb-2">输入</label>
                 <input
@@ -97,7 +104,7 @@ export default function CenterPanel({ agents }: CenterPanelProps) {
                 />
             </div>
 
-            {/* Output Section */}
+            {/*Output*/}
             <div className="mb-4">
                 <label className="block mb-2">输出</label>
                 <textarea
@@ -107,7 +114,7 @@ export default function CenterPanel({ agents }: CenterPanelProps) {
                 />
             </div>
 
-            {/* Execute Button */}
+            {/*Execute Button*/}
             <button
                 onClick={executeWorkflow}
                 className="px-4 py-2 bg-blue-500 text-white rounded"
@@ -124,6 +131,8 @@ interface DraggableAgentProps {
     deleteAgent: (index: number) => void
 }
 
+const kindData = ['Analyser', 'Judge', 'Handler', 'Painter']
+const kindAvatarSrc = [analyserImg, judgeImg, handlerImg, painterImg]
 function DraggableAgent({ agent, index, deleteAgent }: DraggableAgentProps) {
     const [{ isDragging }, drag] = useDrag(() => ({
         type: 'AGENT',
@@ -138,7 +147,11 @@ function DraggableAgent({ agent, index, deleteAgent }: DraggableAgentProps) {
             ref={drag}
             className={`flex justify-between items-center mb-2 p-2 border ${isDragging ? 'opacity-50' : ''}`}
         >
-            <span>{agent.name}</span>
+
+            <img className={'w-1/7 rounded '}  src={kindAvatarSrc[agent.kind]} alt=''></img>
+            <span className={'w-1/7 font-bold'}>{kindData[agent.kind]}</span>
+            <span className='w-1/7 font-bold'>{agent.name}</span>
+            <span className={'w-2/3'}>{agent.description}</span>
             <button
                 onClick={() => deleteAgent(index)}
                 className="text-red-500 hover:text-red-700"

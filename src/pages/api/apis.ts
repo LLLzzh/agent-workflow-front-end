@@ -20,7 +20,7 @@ export interface AnalyseAgent extends AgentBase {
 }
 
 /**
- * @description Judger agent (kind = 1)
+ * @description Judge agent (kind = 1)
  */
 export interface JudgeAgent extends AgentBase {
     identity_setting: string
@@ -119,5 +119,6 @@ export async function callAgent(data: CallAgentData) {
 
 interface CallAgentData {
     id: string
+    kind: number
     text: string
 }
