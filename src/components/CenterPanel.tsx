@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useDrop, useDrag } from 'react-dnd'
 import { Agent,callAgent } from '@/pages/api/apis'
-import leftPanel from "@/components/LeftPanel";
 import analyserImg from '@/assets/analyser.png'
 import judgeImg from '@/assets/judge.png'
 import handlerImg from '@/assets/handler.png'
@@ -17,7 +16,7 @@ export default function CenterPanel({ agents }: CenterPanelProps) {
     const [workflowAgents, setWorkflowAgents] = useState<Agent[]>([])
     const [input, setInput] = useState('')
     const [output, setOutput] = useState('')
-    const [currentOutput, setCurrentOutput] = useState('');
+    const [currentOutput, setCurrentOutput] = useState<{id:string,content:string}[]>([{id:'',content:''}]);
 
     // Handle dropping agents
     const [{ isOver }, drop] = useDrop(() => ({
@@ -95,8 +94,8 @@ export default function CenterPanel({ agents }: CenterPanelProps) {
                     const parsedData = JSON.parse(line); // 解析每行 JSON
                     if (parsedData.content) {
                         partialContent += parsedData.content; // 拼接 content
-                        console.log(`Content received: "${parsedData.content}"`);
-                        setCurrentOutput(partialContent);
+                        setCurrentOutput([{id:agent.id,content:partialContent}]);
+                        console.log(currentOutput)
                     }
                 } catch (e) {
                     console.error("Failed to parse line:", line, e);
@@ -112,7 +111,7 @@ export default function CenterPanel({ agents }: CenterPanelProps) {
     return (
         <>
             <LeftPanel workflowAgents={workflowAgents} currentOutput={currentOutput}/>
-            <div ref={drop} className="flex flex-col p-4 w-3/4">
+            <div ref={drop} className="flex flex-col p-4 w-2/3">
             <div className="mb-4">
                 <h2 className="text-xl font-bold">我的工作流</h2>
                 {/*Execute Button*/}
@@ -155,12 +154,12 @@ export default function CenterPanel({ agents }: CenterPanelProps) {
             </div>
 
             {/*Output*/}
-            <div className="mb-4">
+            <div className="mb-4 h-100">
                 <label className="block mb-2">输出</label>
                 <textarea
                     value={output}
                     readOnly
-                    className="w-full p-2 border rounded max-h-"
+                    className="w-full p-2 border rounded h-80"
                 />
             </div>
 
