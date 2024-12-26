@@ -19,7 +19,10 @@ export default function RightPanel({ onAgentAdd }: RightPanelProps) {
         const allAgents: Agent[] = []
         for(let i = 0; i < 4; i++){
             const res = await getAgentList(i)
-            allAgents.push(...res.payload)
+            if(res.payload){
+                console.log('res.payload',res.payload)
+                allAgents.push(...res.payload)
+            }
         }
         console.log(allAgents)
         setAgents(allAgents)

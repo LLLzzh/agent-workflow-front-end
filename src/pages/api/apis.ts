@@ -113,12 +113,24 @@ export type Agent = AnalyseAgent | JudgeAgent | HandleAgent | PainterAgent
  * @description call agent
  */
 export async function callAgent(data: CallAgentData) {
-    const res = await request.post('/call/one', data)
-    return res
+    const response = await fetch('http://127.0.0.1:5000/call/one', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+    });
+
+    if (!response.body) {
+        throw new Error('Response body is empty');
+    }
+
+    return response;
 }
+
 
 interface CallAgentData {
     id: string
     kind: number
-    text: string
+    input: string
 }

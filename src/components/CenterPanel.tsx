@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useDrop, useDrag } from 'react-dnd'
 import { Agent,callAgent } from '@/pages/api/apis'
+import leftPanel from "@/components/LeftPanel";
 import analyserImg from '@/assets/analyser.png'
 import judgeImg from '@/assets/judge.png'
 import handlerImg from '@/assets/handler.png'
 import painterImg from '@/assets/painter.png'
+import LeftPanel from "@/components/LeftPanel";
 
 
 interface CenterPanelProps {
@@ -15,6 +17,7 @@ export default function CenterPanel({ agents }: CenterPanelProps) {
     const [workflowAgents, setWorkflowAgents] = useState<Agent[]>([])
     const [input, setInput] = useState('')
     const [output, setOutput] = useState('')
+    const [currentOutput, setCurrentOutput] = useState('');
 
     // Handle dropping agents
     const [{ isOver }, drop] = useDrop(() => ({
@@ -44,34 +47,81 @@ export default function CenterPanel({ agents }: CenterPanelProps) {
 
     // 执行工作流
     const executeWorkflow = async () => {
-        let currentInput = input
+        let currentInput = input; // 初始输入
+        let finalOutput = ""; // 最终拼接的输出内容
+
         for (let i = 0; i < workflowAgents.length; i++) {
-            const agent = workflowAgents[i]
-            currentInput = await executeAgent(agent, currentInput)
+            const agent = workflowAgents[i];
+            console.log(`Executing Agent: ${agent.name} with input: ${currentInput}`);
+
+            // 执行当前 agent
+            const result = await executeAgent(agent, currentInput);
+
+            // 将当前 agent 的输出拼接到最终输出中
+            finalOutput += result.content;
+
+            // 将当前 agent 的输出作为下一个 agent 的输入
+            currentInput = result.content;
+
+            console.log(`Agent ${agent.name} returned content: "${result.content}"`);
         }
-        setOutput(currentInput) // Final output after all agents have been executed
-    }
+
+        setOutput(finalOutput); // 显示最终输出
+        console.log(`Final Workflow Output: "${finalOutput}"`);
+    };
 
     const executeAgent = async (agent: Agent, input: string) => {
-        return new Promise<string>(async (resolve) => {
-            const res = await callAgent({
-                id: agent.id,
-                kind: agent.kind,
-                text: input
-            })
-            console.log ('the result of executing agent',agent.name,'is',res)
+        const res = await callAgent({
+            id: agent.id,
+            kind: agent.kind,
+            input: input,
+        });
 
-            setTimeout(() => {
-                console.log(`Agent ${agent.name} processed input: ${input}`)
-                resolve(`${input} -> Processed by ${agent.name}`)
-            }, 100)
-        })
-    }
+        // 判断是否有流式响应
+        const reader = res.body?.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let partialContent = "";
+
+        let done = false;
+        while (!done) {
+            const { value, done: isDone } = await reader.read();
+            done = isDone;
+
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split("\n").filter(line => line.trim());
+
+            for (const line of lines) {
+                try {
+                    const parsedData = JSON.parse(line); // 解析每行 JSON
+                    if (parsedData.content) {
+                        partialContent += parsedData.content; // 拼接 content
+                        console.log(`Content received: "${parsedData.content}"`);
+                        setCurrentOutput(partialContent);
+                    }
+                } catch (e) {
+                    console.error("Failed to parse line:", line, e);
+                }
+            }
+        }
+        console.log(`Final Output for Agent: "${partialContent}"`);
+
+        return { content: partialContent };
+    };
+
 
     return (
-        <div ref={drop} className="flex flex-col p-4 w-3/4">
+        <>
+            <LeftPanel workflowAgents={workflowAgents} currentOutput={currentOutput}/>
+            <div ref={drop} className="flex flex-col p-4 w-3/4">
             <div className="mb-4">
                 <h2 className="text-xl font-bold">我的工作流</h2>
+                {/*Execute Button*/}
+                <button
+                    onClick={executeWorkflow}
+                    className="px-4 py-2 bg-blue-500 text-white rounded"
+                >
+                    执行工作流
+                </button>
                 <div className="border p-4 mt-2">
                     <h3 className="font-semibold">Agent拖拽至此处</h3>
                     <div className={`min-h-[200px] border-dashed border-2 ${isOver ? 'bg-gray-100' : ''}`}>
@@ -110,18 +160,12 @@ export default function CenterPanel({ agents }: CenterPanelProps) {
                 <textarea
                     value={output}
                     readOnly
-                    className="w-full p-2 border rounded"
+                    className="w-full p-2 border rounded max-h-"
                 />
             </div>
 
-            {/*Execute Button*/}
-            <button
-                onClick={executeWorkflow}
-                className="px-4 py-2 bg-blue-500 text-white rounded"
-            >
-                执行工作流
-            </button>
         </div>
+        </>
     )
 }
 
@@ -148,7 +192,7 @@ function DraggableAgent({ agent, index, deleteAgent }: DraggableAgentProps) {
             className={`flex justify-between items-center mb-2 p-2 border ${isDragging ? 'opacity-50' : ''}`}
         >
 
-            <img className={'w-1/7 rounded '}  src={kindAvatarSrc[agent.kind]} alt=''></img>
+            {kindAvatarSrc[agent.kind] && <img src={kindAvatarSrc[agent.kind]} alt={kindData[agent.kind]} className="w-8 h-8 mr-2" />}
             <span className={'w-1/7 font-bold'}>{kindData[agent.kind]}</span>
             <span className='w-1/7 font-bold'>{agent.name}</span>
             <span className={'w-2/3'}>{agent.description}</span>

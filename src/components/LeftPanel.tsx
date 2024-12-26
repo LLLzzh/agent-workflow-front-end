@@ -1,22 +1,28 @@
+import React from 'react';
+
 interface LeftPanelProps {
-    results: string[]
+    workflowAgents: any[];  // 工作流中的所有 agents
+    currentOutput: string;  // 当前的输出
 }
 
-export default function LeftPanel({ results }: LeftPanelProps) {
+const LeftPanel = ({ workflowAgents, currentOutput }: LeftPanelProps) => {
     return (
-        <div className="w-1/4 border-r p-4 overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">执行结果</h2>
-            {results.map((result, index) => (
-                <ResultCard key={index} content={result} />
-            ))}
+        <div className="w-1/4 p-4 border-l">
+            <h2 className="text-xl font-bold mb-4">每一步输出</h2>
+            <div className="space-y-4">
+                {workflowAgents.length > 1 ? (
+                    workflowAgents.slice(0, -1).map((agent, index) => (
+                        <div key={index} className="p-2 border rounded-md">
+                            <h3 className="font-semibold">{`Step ${index + 1}: ${agent.name}`}</h3>
+                            <p>{currentOutput}</p>
+                        </div>
+                    ))
+                ) : (
+                    <p className="text-gray-500">没有执行的步骤。</p>
+                )}
+            </div>
         </div>
-    )
-}
+    );
+};
 
-function ResultCard({ content }: { content: string }) {
-    return (
-        <div className="p-4 mb-2 border rounded shadow">
-            {content}
-        </div>
-    )
-} 
+export default LeftPanel;
