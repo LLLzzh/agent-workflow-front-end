@@ -20,11 +20,9 @@ export default function RightPanel({ onAgentAdd }: RightPanelProps) {
         for(let i = 0; i < 4; i++){
             const res = await getAgentList(i)
             if(res.payload){
-                console.log('res.payload',res.payload)
                 allAgents.push(...res.payload)
             }
         }
-        console.log(allAgents)
         setAgents(allAgents)
     }
 
@@ -72,7 +70,6 @@ export default function RightPanel({ onAgentAdd }: RightPanelProps) {
                                 ...data,
                                 id: res.payload
                             }
-                            console.log('the full agent is'+JSON.stringify(newAgent))
                             setAgents([...agents, newAgent])
                             onAgentAdd(newAgent)
                             setShowAddForm(false)

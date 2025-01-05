@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import {useCallback, useState} from 'react'
 import { useDrop, useDrag } from 'react-dnd'
 import { Agent,callAgent } from '@/pages/api/apis'
 import analyserImg from '@/assets/analyser.png'
@@ -6,17 +6,46 @@ import judgeImg from '@/assets/judge.png'
 import handlerImg from '@/assets/handler.png'
 import painterImg from '@/assets/painter.png'
 import LeftPanel from "@/components/LeftPanel";
+import {ReactFlow, useNodesState, useEdgesState, addEdge, Controls, Background, applyEdgeChanges ,applyNodeChanges,
+    type Node,
+    type Edge,
+    type OnConnect,
+    type OnNodesChange,
+    type OnEdgesChange
+} from "@xyflow/react";
+import '@xyflow/react/dist/style.css';
 
 
-interface CenterPanelProps {
-    agents: Agent[]
-}
-
-export default function CenterPanel({ agents }: CenterPanelProps) {
+export default function CenterPanel() {
     const [workflowAgents, setWorkflowAgents] = useState<Agent[]>([])
     const [input, setInput] = useState('')
     const [output, setOutput] = useState('')
     const [currentOutput, setCurrentOutput] = useState<{id:string,content:string}[]>([{id:'',content:''}]);
+
+
+    // Agent Nodes
+    const initialNodes:Node[] = [
+        {id: '1', data: {label: 'start'},position: { x: 0, y: 0 },type: 'input'},
+    ];
+    const initialEdges:Edge[] = [];
+
+
+    const [nodes, setNodes ] = useNodesState(initialNodes);
+    const [ edges, setEdges ] = useEdgesState(initialEdges);
+    const onNodesChange:OnNodesChange = useCallback(
+        (changes) => setNodes((nds) => applyNodeChanges(changes,nds)),
+        [setNodes],
+    );
+    const onEdgesChange:OnEdgesChange = useCallback(
+        (changes) => setEdges((eds) => applyEdgeChanges(changes,eds)),
+        [setEdges],
+    );
+    const onConnect:OnConnect = useCallback(
+        (params) => setEdges((eds)=> addEdge(params,eds)),
+        [setEdges],
+    );
+
+    const [position, setPosition] = useState({ x: 100, y: 100 });
 
     // Handle dropping agents
     const [{ isOver }, drop] = useDrop(() => ({
@@ -26,9 +55,11 @@ export default function CenterPanel({ agents }: CenterPanelProps) {
             setWorkflowAgents((prevAgents) => {
                 // 如果没有找到相同的 agent，则将其添加到工作流中
                 if (!prevAgents.some(agent => agent.id === item.id)) {
+                    setPosition({ x: position.x + 100, y: position.y + 100 });
+                    setNodes([...nodes, {id: item.id, data: {label: item.name}, position: position, type: 'default'}]);
+                    console.log(`nodes is ${JSON.stringify(nodes)}`);
                     return [...prevAgents, item]
                 } else {
-                    console.log(`Agent with id ${item.id} already exists in the workflow`)
                     return prevAgents // 如果已存在，则返回原状态，不做修改
                 }
             })
@@ -62,11 +93,8 @@ export default function CenterPanel({ agents }: CenterPanelProps) {
             // 将当前 agent 的输出作为下一个 agent 的输入
             currentInput = result.content;
 
-            console.log(`Agent ${agent.name} returned content: "${result.content}"`);
         }
-
         setOutput(finalOutput); // 显示最终输出
-        console.log(`Final Workflow Output: "${finalOutput}"`);
     };
 
     const executeAgent = async (agent: Agent, input: string) => {
@@ -154,15 +182,21 @@ export default function CenterPanel({ agents }: CenterPanelProps) {
             </div>
 
             {/*Output*/}
-            <div className="mb-4 h-100">
-                <label className="block mb-2">输出</label>
-                <textarea
-                    value={output}
-                    readOnly
-                    className="w-full p-2 border rounded h-80"
-                />
-            </div>
+            {/*<div className="mb-4 h-10">*/}
+            {/*    <label className="block mb-2">输出</label>*/}
+            {/*    <textarea*/}
+            {/*        value={output}*/}
+            {/*        readOnly*/}
+            {/*        className="w-full p-2 border rounded h-80"*/}
+            {/*    />*/}
+            {/*</div>*/}
 
+            <div className={'w-full h-96'}>
+                <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect}>
+                    <Background/>
+                    <Controls/>
+                </ReactFlow>
+            </div>
         </div>
         </>
     )
@@ -191,7 +225,7 @@ function DraggableAgent({ agent, index, deleteAgent }: DraggableAgentProps) {
             className={`flex justify-between items-center mb-2 p-2 border ${isDragging ? 'opacity-50' : ''}`}
         >
 
-            {kindAvatarSrc[agent.kind] && <img src={kindAvatarSrc[agent.kind]} alt={kindData[agent.kind]} className="w-8 h-8 mr-2" />}
+            {/*{kindAvatarSrc[agent.kind] && <img src={kindAvatarSrc[agent.kind]} alt={kindData[agent.kind]} className="w-8 h-8 mr-2" />}*/}
             <span className={'w-1/7 font-bold'}>{kindData[agent.kind]}</span>
             <span className='w-1/7 font-bold'>{agent.name}</span>
             <span className={'w-2/3'}>{agent.description}</span>
