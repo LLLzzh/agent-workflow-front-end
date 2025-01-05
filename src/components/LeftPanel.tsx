@@ -19,7 +19,6 @@ const LeftPanel = ({ workflowAgents, currentOutput }: LeftPnelProps) => {
             }
         });
         setOutputCache(newCache); // 更新缓存
-        console.log('Updated outputCache:', newCache); // 确保打印的是更新后的缓存
     }, [currentOutput]);
 
     return (

@@ -1,88 +1,80 @@
-import {useCallback, useState} from 'react'
-import { useDrop, useDrag } from 'react-dnd'
-import { Agent,callAgent } from '@/pages/api/apis'
-import analyserImg from '@/assets/analyser.png'
-import judgeImg from '@/assets/judge.png'
-import handlerImg from '@/assets/handler.png'
-import painterImg from '@/assets/painter.png'
+import { useCallback, useState, useEffect } from 'react'
+import { useDrop } from 'react-dnd'
+import { Agent, callAgent } from '@/pages/api/apis'
 import LeftPanel from "@/components/LeftPanel";
-import {ReactFlow, useNodesState, useEdgesState, addEdge, Controls, Background, applyEdgeChanges ,applyNodeChanges,
-    type Node,
-    type Edge,
-    type OnConnect,
-    type OnNodesChange,
-    type OnEdgesChange
-} from "@xyflow/react";
+import { ReactFlow, useNodesState, useEdgesState, addEdge, Controls, Background, applyEdgeChanges, applyNodeChanges, type Node, type Edge, type OnConnect, type OnNodesChange, type OnEdgesChange } from "@xyflow/react";
 import '@xyflow/react/dist/style.css';
+import {useRef} from "react";
 
-
+// 初始化组件
 export default function CenterPanel() {
-    const [workflowAgents, setWorkflowAgents] = useState<Agent[]>([])
-    const [input, setInput] = useState('')
-    const [output, setOutput] = useState('')
-    const [currentOutput, setCurrentOutput] = useState<{id:string,content:string}[]>([{id:'',content:''}]);
-
+    const [agents,setAgents] = useState<Agent[]>([])
+    const [workflowAgents, setWorkflowAgents] = useState<Agent[]>([]); // 用于存储按照顺序排列的工作流
+    const [input, setInput] = useState('');
+    const [output, setOutput] = useState('');
+    const [currentOutput, setCurrentOutput] = useState<{ id: string, content: string }[]>([{ id: '', content: '' }]);
 
     // Agent Nodes
-    const initialNodes:Node[] = [
-        {id: '1', data: {label: 'start'},position: { x: 0, y: 0 },type: 'input'},
-    ];
-    const initialEdges:Edge[] = [];
+    const initialNodes: Node[] = [{ id: '1', data: { label: 'start' }, position: { x: 0, y: 0 }, type: 'input' }];
+    const initialEdges: Edge[] = [];
 
-
-    const [nodes, setNodes ] = useNodesState(initialNodes);
-    const [ edges, setEdges ] = useEdgesState(initialEdges);
-    const onNodesChange:OnNodesChange = useCallback(
-        (changes) => setNodes((nds) => applyNodeChanges(changes,nds)),
+    const [nodes, setNodes] = useNodesState(initialNodes);
+    const [edges, setEdges] = useEdgesState(initialEdges);
+    const onNodesChange: OnNodesChange = useCallback(
+        (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
         [setNodes],
     );
-    const onEdgesChange:OnEdgesChange = useCallback(
-        (changes) => setEdges((eds) => applyEdgeChanges(changes,eds)),
+    const onEdgesChange: OnEdgesChange = useCallback(
+        (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
         [setEdges],
     );
-    const onConnect:OnConnect = useCallback(
-        (params) => setEdges((eds)=> addEdge(params,eds)),
+    const onConnect: OnConnect = useCallback(
+        (params) => setEdges((eds) => addEdge(params, eds)),
         [setEdges],
     );
 
     const [position, setPosition] = useState({ x: 100, y: 100 });
+    const agentsRef = useRef<Agent[]>([]);
 
-    // Handle dropping agents
     const [{ isOver }, drop] = useDrop(() => ({
         accept: 'AGENT',
         drop: (item: Agent) => {
-            // 确保获取最新的 workflowAgents 状态
-            setWorkflowAgents((prevAgents) => {
-                // 如果没有找到相同的 agent，则将其添加到工作流中
-                if (!prevAgents.some(agent => agent.id === item.id)) {
-                    setPosition({ x: position.x + 100, y: position.y + 100 });
-                    setNodes([...nodes, {id: item.id, data: {label: item.name}, position: position, type: 'default'}]);
-                    console.log(`nodes is ${JSON.stringify(nodes)}`);
-                    return [...prevAgents, item]
-                } else {
-                    return prevAgents // 如果已存在，则返回原状态，不做修改
-                }
-            })
+            // 将代理添加到 refs 中，确保代理是最新的
+            agentsRef.current = [...agentsRef.current, item];
+            setNodes((prevNodes) => [
+                ...prevNodes,
+                { id: item.id, data: { label: item.name }, position: position, type: 'default' }
+            ]);
         },
         collect: (monitor) => ({
             isOver: monitor.isOver()
         })
-    }))
+    }));
 
+    useEffect(() => {
+        const order = getWorkflowOrder(edges);  // 获取顺序
+        console.log("工作流顺序:", order);  // 打印顺序
 
-    // 删除agent
-    const deleteAgent = (index: number) => {
-        setWorkflowAgents((prevAgents) => prevAgents.filter((_, i) => i !== index))
-    }
+        // 使用 refs 获取代理数组
+        const orderedAgents = order
+            .map(id => agentsRef.current.find(agent => agent.id === id))  // 使用 ref 中的 agents
+            .filter(agent => agent);  // 过滤掉未找到的 agent
+
+        console.log("根据工作流顺序找到的 agents:", orderedAgents);  // 打印最终的 agents
+
+        // 更新 workflowAgents
+        setWorkflowAgents(orderedAgents);
+    }, [edges]);
+
 
     // 执行工作流
     const executeWorkflow = async () => {
         let currentInput = input; // 初始输入
         let finalOutput = ""; // 最终拼接的输出内容
 
+        // 遍历顺序的 workflowAgents 来逐个执行
         for (let i = 0; i < workflowAgents.length; i++) {
             const agent = workflowAgents[i];
-            console.log(`Executing Agent: ${agent.name} with input: ${currentInput}`);
 
             // 执行当前 agent
             const result = await executeAgent(agent, currentInput);
@@ -93,6 +85,11 @@ export default function CenterPanel() {
             // 将当前 agent 的输出作为下一个 agent 的输入
             currentInput = result.content;
 
+            // 更新每个 agent 的输出
+            setCurrentOutput(prev => [
+                ...prev,
+                { id: agent.id, content: result.content }
+            ]);
         }
         setOutput(finalOutput); // 显示最终输出
     };
@@ -104,7 +101,6 @@ export default function CenterPanel() {
             input: input,
         });
 
-        // 判断是否有流式响应
         const reader = res.body?.getReader();
         const decoder = new TextDecoder("utf-8");
         let partialContent = "";
@@ -119,122 +115,97 @@ export default function CenterPanel() {
 
             for (const line of lines) {
                 try {
-                    const parsedData = JSON.parse(line); // 解析每行 JSON
+                    const parsedData = JSON.parse(line);
                     if (parsedData.content) {
-                        partialContent += parsedData.content; // 拼接 content
-                        setCurrentOutput([{id:agent.id,content:partialContent}]);
-                        console.log(currentOutput)
+                        partialContent += parsedData.content;
+                        setCurrentOutput([{ id: agent.id, content: partialContent }]);
                     }
                 } catch (e) {
                     console.error("Failed to parse line:", line, e);
                 }
             }
         }
-        console.log(`Final Output for Agent: "${partialContent}"`);
 
         return { content: partialContent };
     };
 
+    // 根据edges输出工作流顺序
+    const getWorkflowOrder = (edges: Edge[]) => {
+        // 构建一个图
+        const graph: { [key: string]: string[] } = {};
+        const allNodes = new Set<string>();
+
+        // 处理 edges 构建图
+        edges.forEach(edge => {
+            const { source, target } = edge;
+            if (!graph[source]) graph[source] = [];
+            graph[source].push(target);
+            allNodes.add(source);
+            allNodes.add(target);
+        });
+
+        // 拓扑排序函数
+        const topologicalSort = () => {
+            const visited: Set<string> = new Set();
+            const result: string[] = [];
+            const visit = (node: string) => {
+                if (visited.has(node)) return;
+                visited.add(node);
+
+                if (graph[node]) {
+                    graph[node].forEach(visit);
+                }
+
+                result.push(node);
+            };
+
+            allNodes.forEach(visit);
+            return result.reverse(); // 返回的顺序是从开始到结束
+        };
+
+        const order = topologicalSort();
+        return order;
+    };
+
+    useEffect(() => {
+        console.log("更新后的 workflowAgents:", workflowAgents);
+    }, [workflowAgents]);
+
 
     return (
         <>
-            <LeftPanel workflowAgents={workflowAgents} currentOutput={currentOutput}/>
+            <LeftPanel workflowAgents={workflowAgents} currentOutput={currentOutput} />
             <div ref={drop} className="flex flex-col p-4 w-2/3">
-            <div className="mb-4">
-                <h2 className="text-xl font-bold">我的工作流</h2>
-                {/*Execute Button*/}
-                <button
-                    onClick={executeWorkflow}
-                    className="px-4 py-2 bg-blue-500 text-white rounded"
-                >
-                    执行工作流
-                </button>
-                <div className="border p-4 mt-2">
-                    <h3 className="font-semibold">Agent拖拽至此处</h3>
-                    <div className={`min-h-[200px] border-dashed border-2 ${isOver ? 'bg-gray-100' : ''}`}>
-                        {workflowAgents.length === 0 ? (
-                            <p className="text-center text-gray-500">请将Agent拖拽至此处</p>
-                        ) : (
-                            <div>
-                                {workflowAgents.map((agent, index) => (
-                                    <DraggableAgent
-                                        key={agent.id}
-                                        index={index}
-                                        agent={agent}
-                                        deleteAgent={deleteAgent}
-                                    />
-                                ))}
-                            </div>
-                        )}
-                    </div>
+                <div className="mb-4">
+                    <h2 className="text-xl font-bold">我的工作流</h2>
+                    {/* Execute Button */}
+                    <button
+                        onClick={executeWorkflow}
+                        className="px-4 py-2 bg-blue-500 text-white rounded"
+                    >
+                        执行工作流
+                    </button>
+                </div>
+
+                {/* Input */}
+                <div className="mb-4">
+                    <label className="block mb-2">输入</label>
+                    <input
+                        type="text"
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        className="w-full p-2 border rounded"
+                    />
+                </div>
+
+                {/* Output */}
+                <div className="w-full h-96">
+                    <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect}>
+                        <Background />
+                        <Controls />
+                    </ReactFlow>
                 </div>
             </div>
-
-            {/*Input*/}
-            <div className="mb-4">
-                <label className="block mb-2">输入</label>
-                <input
-                    type="text"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    className="w-full p-2 border rounded"
-                />
-            </div>
-
-            {/*Output*/}
-            {/*<div className="mb-4 h-10">*/}
-            {/*    <label className="block mb-2">输出</label>*/}
-            {/*    <textarea*/}
-            {/*        value={output}*/}
-            {/*        readOnly*/}
-            {/*        className="w-full p-2 border rounded h-80"*/}
-            {/*    />*/}
-            {/*</div>*/}
-
-            <div className={'w-full h-96'}>
-                <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect}>
-                    <Background/>
-                    <Controls/>
-                </ReactFlow>
-            </div>
-        </div>
         </>
-    )
-}
-
-interface DraggableAgentProps {
-    agent: Agent
-    index: number
-    deleteAgent: (index: number) => void
-}
-
-const kindData = ['Analyser', 'Judge', 'Handler', 'Painter']
-const kindAvatarSrc = [analyserImg, judgeImg, handlerImg, painterImg]
-function DraggableAgent({ agent, index, deleteAgent }: DraggableAgentProps) {
-    const [{ isDragging }, drag] = useDrag(() => ({
-        type: 'AGENT',
-        item: { index, id: agent.id }, // Ensure only the index and id are passed
-        collect: (monitor) => ({
-            isDragging: monitor.isDragging()
-        })
-    }), [agent.id, index])
-
-    return (
-        <div
-            ref={drag}
-            className={`flex justify-between items-center mb-2 p-2 border ${isDragging ? 'opacity-50' : ''}`}
-        >
-
-            {/*{kindAvatarSrc[agent.kind] && <img src={kindAvatarSrc[agent.kind]} alt={kindData[agent.kind]} className="w-8 h-8 mr-2" />}*/}
-            <span className={'w-1/7 font-bold'}>{kindData[agent.kind]}</span>
-            <span className='w-1/7 font-bold'>{agent.name}</span>
-            <span className={'w-2/3'}>{agent.description}</span>
-            <button
-                onClick={() => deleteAgent(index)}
-                className="text-red-500 hover:text-red-700"
-            >
-                删除
-            </button>
-        </div>
-    )
+    );
 }
