@@ -33,36 +33,34 @@ export default function CenterPanel() {
         [setEdges],
     );
 
-    const [position, setPosition] = useState({ x: 100, y: 100 });
     const agentsRef = useRef<Agent[]>([]);
 
     const [{ isOver }, drop] = useDrop(() => ({
         accept: 'AGENT',
-        drop: (item: Agent) => {
-            // 将代理添加到 refs 中，确保代理是最新的
+        drop: (item: Agent,monitor) => {
+            const clientOffset = monitor.getClientOffset();
+            if(!clientOffset) return;
+            // 将代理添加到 refs 中
             agentsRef.current = [...agentsRef.current, item];
             setNodes((prevNodes) => [
                 ...prevNodes,
-                { id: item.id, data: { label: item.name }, position: position, type: 'default' }
+                { id: item.id, data: { label: item.name }, position: {x: clientOffset.x-700,y: clientOffset.y-300}, type: 'default' }
             ]);
+
         },
         collect: (monitor) => ({
             isOver: monitor.isOver()
         })
     }));
 
+
     useEffect(() => {
         const order = getWorkflowOrder(edges);  // 获取顺序
-        console.log("工作流顺序:", order);  // 打印顺序
 
         // 使用 refs 获取代理数组
         const orderedAgents = order
-            .map(id => agentsRef.current.find(agent => agent.id === id))  // 使用 ref 中的 agents
+            .map(id => agentsRef.current.find(agent => agent.id === id))
             .filter(agent => agent);  // 过滤掉未找到的 agent
-
-        console.log("根据工作流顺序找到的 agents:", orderedAgents);  // 打印最终的 agents
-
-        // 更新 workflowAgents
         setWorkflowAgents(orderedAgents);
     }, [edges]);
 
@@ -75,14 +73,8 @@ export default function CenterPanel() {
         // 遍历顺序的 workflowAgents 来逐个执行
         for (let i = 0; i < workflowAgents.length; i++) {
             const agent = workflowAgents[i];
-
-            // 执行当前 agent
             const result = await executeAgent(agent, currentInput);
-
-            // 将当前 agent 的输出拼接到最终输出中
             finalOutput += result.content;
-
-            // 将当前 agent 的输出作为下一个 agent 的输入
             currentInput = result.content;
 
             // 更新每个 agent 的输出
@@ -91,7 +83,7 @@ export default function CenterPanel() {
                 { id: agent.id, content: result.content }
             ]);
         }
-        setOutput(finalOutput); // 显示最终输出
+        setOutput(finalOutput);
     };
 
     const executeAgent = async (agent: Agent, input: string) => {
@@ -167,11 +159,6 @@ export default function CenterPanel() {
         return order;
     };
 
-    useEffect(() => {
-        console.log("更新后的 workflowAgents:", workflowAgents);
-    }, [workflowAgents]);
-
-
     return (
         <>
             <LeftPanel workflowAgents={workflowAgents} currentOutput={currentOutput} />
@@ -200,7 +187,7 @@ export default function CenterPanel() {
 
                 {/* Output */}
                 <div className="w-full h-96">
-                    <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect}>
+                    <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} minZoom={0.5} maxZoom={2}>
                         <Background />
                         <Controls />
                     </ReactFlow>
