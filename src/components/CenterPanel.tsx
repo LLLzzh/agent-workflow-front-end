@@ -5,6 +5,7 @@ import LeftPanel from "@/components/LeftPanel";
 import { ReactFlow, useNodesState, useEdgesState, addEdge, Controls, Background, applyEdgeChanges, applyNodeChanges, type Node, type Edge, type OnConnect, type OnNodesChange, type OnEdgesChange } from "@xyflow/react";
 import '@xyflow/react/dist/style.css';
 import {useRef} from "react";
+import CustomEdge from "@/components/Flow/CustomEdge";
 
 // 初始化组件
 export default function CenterPanel() {
@@ -17,7 +18,9 @@ export default function CenterPanel() {
     // Agent Nodes
     const initialNodes: Node[] = [{ id: '1', data: { label: 'start' }, position: { x: 0, y: 0 }, type: 'input' }];
     const initialEdges: Edge[] = [];
-
+    const edgeTypes = {
+        'custom-edge': CustomEdge,
+    }
     const [nodes, setNodes] = useNodesState(initialNodes);
     const [edges, setEdges] = useEdgesState(initialEdges);
     const onNodesChange: OnNodesChange = useCallback(
@@ -29,7 +32,10 @@ export default function CenterPanel() {
         [setEdges],
     );
     const onConnect: OnConnect = useCallback(
-        (params) => setEdges((eds) => addEdge(params, eds)),
+        (connection) => {
+            const edge = { ...connection, type: 'custom-edge' };
+            setEdges((eds) => addEdge(edge, eds));
+        },
         [setEdges],
     );
 
@@ -187,7 +193,7 @@ export default function CenterPanel() {
 
                 {/* Output */}
                 <div className="w-full h-96">
-                    <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} minZoom={0.5} maxZoom={2}>
+                    <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} minZoom={0.5} maxZoom={2} edgeTypes={edgeTypes}>
                         <Background />
                         <Controls />
                     </ReactFlow>
