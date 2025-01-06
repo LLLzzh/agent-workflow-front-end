@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Agent } from "@/pages/api/apis";
+import marked from 'marked'
 
 interface LeftPnelProps {
     workflowAgents: Agent[];  // 工作流中的所有 agents
@@ -22,13 +23,13 @@ const LeftPanel = ({ workflowAgents, currentOutput }: LeftPnelProps) => {
     }, [currentOutput]);
 
     return (
-        <div className="w-1/3 p-4 border-l">
-            <h2 className="text-xl font-bold mb-4 pt-4">每一步输出</h2>
-            <div className="space-y-4">
+        <div className="w-1/3  border-r max-h-full overflow-y-auto ">
+            <div className="text-xl font-bold -mb-1 p-4 pt-5 pl-6 pb-3 sticky border-b-2 top-0 bg-gray-100">输出</div>
+            <div className="space-y-4 p-4">
                 {workflowAgents.length > 0 ? (
                     workflowAgents.map((agent, index) => (
-                        <div key={agent.id} className="p-2 border rounded-md max-h-80 overflow-y-auto">
-                            <h3 className="font-semibold">{`Step ${index + 1}: ${agent.name}`}</h3>
+                        <div key={agent.id} className="p-2 border-0 rounded-md">
+                            <div className="font-semibold mb-3 rounded p-3 bg-gray-100">{`Step ${index + 1}: ${agent.name}`}</div>
                             {
                                 outputCache[agent.id] !== undefined ?
                                     <textarea className={"w-full p-2 border rounded h-60"} readOnly={true} value={outputCache[agent.id]}/> :

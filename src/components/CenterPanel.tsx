@@ -404,7 +404,7 @@ export default function CenterPanel() {
                             sceneExists &&
                             <button
                                 onClick={handleDeleteScene}
-                                className="px-4 py-2 bg-gray-100 ml-4 text-red-500 rounded"
+                                className="px-4 py-2 bg-gray-200 border border-gray-300 ml-4 text-black rounded"
                             >
                                 删除场景
                             </button>
@@ -412,7 +412,7 @@ export default function CenterPanel() {
                         {/* 场景选择下拉框 */}
                         <div className="relative">
                             <button
-                                className="px-4 py-2 bg-blue-500 text-white rounded w-30 ml-4"
+                                className="px-4 py-2 bg-gray-200 border border-gray-300 text-black rounded w-30 ml-4"
                                 onClick={() => setSceneDropdown(!sceneDropdown)}
                             >
                                 选择场景
@@ -439,28 +439,22 @@ export default function CenterPanel() {
                             sceneExists ?
                                 <button
                                     onClick={handleUpdateScene}
-                                    className="px-4 py-2 bg-blue-500 ml-4 text-white rounded"
+                                    className="px-4 py-2 bg-gray-200 border border-gray-300 ml-4 text-black rounded"
                                 >
-                                    更新场景
+                                    保存场景
                                 </button>
                                 :
                                 <button
                                     onClick={handleCreateScene}
-                                    className="px-4 py-2 bg-blue-500 ml-4 text-white rounded"
+                                    className="px-4 py-2 bg-gray-200 border border-gray-300 ml-4 text-black rounded"
                                 >
                                     创建场景
                                 </button>
                         }
-                        <button
-                            onClick={executeWorkflow}
-                            className="px-4 py-2 bg-blue-500 text-white rounded ml-4"
-                        >
-                            执行工作流
-                        </button>
                     </div>
                 </div>
 
-                <div className="w-full h-96 pl-4 pr-4 rounded">
+                <div className="w-full h-96 pl-4 pr-4 rounded ">
                     <ReactFlow
                         className={"relative"}
                         nodes={customNodes}
@@ -478,13 +472,23 @@ export default function CenterPanel() {
                 </div>
 
                 {/* Input */}
-                <div className="mb-4 pr-4 pl-4 mt-4">
-                    <label className="block mb-2 ">输入</label>
-                    <input
-                        type="text"
+                <div className="mb-4 pr-4 pl-4 mt-4 ">
+                    <div className={"flex justify-between relative"}>
+                        <div className="font-bold mb-3 p-2  w-1/4 pl-6 border-b-2 rounded bg-gray-100">
+                            输入
+                        </div>
+                        <button
+                            onClick={executeWorkflow}
+                            className="absolute right-0 px-4 py-2 mb-2 bg-green-600 text-white rounded ml-4"
+                        >
+                            执行工作流
+                        </button>
+                    </div>
+
+                    <textarea
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        className="w-full p-2 border rounded"
+                        className="w-full p-2 border-gray-300 border rounded h-60 bg-white "
                     />
                 </div>
             </div>
