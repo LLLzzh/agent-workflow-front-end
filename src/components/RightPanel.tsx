@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Agent, getAgentList, deleteAgent, updateAgent, createAgent, AnalyseAgent, JudgeAgent, HandleAgent, PainterAgent } from '@/pages/api/apis'
+import { Agent, getAgentList, deleteAgent, updateAgent, createAgent, AnalyseAgent, JudgeAgent, HandleAgent, PainterAgent, getSceneList } from '@/pages/api/apis'
 import AnalyserForm from './Right/AnalyserForm'
 import JudgeForm from './Right/JudgerForm'
 import HandlerForm from './Right/HandlerForm'

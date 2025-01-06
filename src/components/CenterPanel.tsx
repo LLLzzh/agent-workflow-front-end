@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useRef, useState} from 'react'
 import {useDrop} from 'react-dnd'
-import {Agent, callAgent} from '@/pages/api/apis'
+import {Agent, callAgent, createScene, updateScene, getSceneList} from '@/pages/api/apis'
 import LeftPanel from "@/components/LeftPanel";
 import {
     addEdge,
@@ -26,9 +26,11 @@ export default function CenterPanel() {
     const [input, setInput] = useState('');
     const [output, setOutput] = useState('');
     const [currentOutput, setCurrentOutput] = useState<{ id: string, content: string }[]>([{ id: '', content: '' }]);
+    const [sceneExists, setSceneExists] = useState(false);
+
 
     // Agent Nodes
-    const initialNodes: Node[] = [{ id: '1', data: { label: 'start',icon: '🔥' }, position: { x: 0, y: 0 }, sourcePosition:'right', type: 'input' ,style: {border: '3px solid #1e2022'}}];
+    const initialNodes: Node[] = [{ id: '1', data: { label: '🔥  start' }, position: { x: 0, y: 0 }, sourcePosition:'right', type: 'input' ,style: {border: '3px solid #1e2022'}}];
     const initialEdges: Edge[] = [];
 
     const [nodes, setNodes] = useNodesState(initialNodes);
@@ -61,7 +63,7 @@ export default function CenterPanel() {
             agentsRef.current = [...agentsRef.current, item];
             setNodes((prevNodes) => [
                 ...prevNodes,
-                { id: item.id, data: { label: item.name, icon: nodeIcon[item.kind] }, position: {x: clientOffset.x-600,y: clientOffset.y-200}, type: 'default' }
+                { id: item.id, data: { label: nodeIcon[item.kind]+item.name }, position: {x: clientOffset.x-600,y: clientOffset.y-200}, type: 'default' }
             ]);
 
         },
@@ -69,6 +71,42 @@ export default function CenterPanel() {
             isOver: monitor.isOver()
         })
     }));
+
+    /**
+     * @description 获取场景列表
+     */
+    const fetchSceneList = async () => {
+        const res = await getSceneList({page: 1, pageSize: 10});
+        const sceneList = res.payload.scenes;
+        console.log (sceneList);
+    }
+
+    useEffect(() => {
+        fetchSceneList();
+    }, []);
+
+    const changeScene = () => {
+
+    }
+
+    /**
+     * @description 创建场景
+     */
+    const handleCreateScene=async () => {
+        console.log(workflowAgents);
+        const newScene = {"name": "1", "agents": workflowAgents};
+        const res = await createScene(newScene);
+        console.log("the result of create",res);
+
+    }
+
+    /**
+     * @description 更新场景
+     */
+    const handleUpdateScene=( ) => {
+
+    }
+
 
     /**
      * @description 根据 edges 设置WorkflowAgents
@@ -216,19 +254,54 @@ export default function CenterPanel() {
             <LeftPanel workflowAgents={workflowAgents} currentOutput={currentOutput} />
             <div ref={drop} className="flex flex-col p-4 w-2/3">
                 <div className="mb-4 flex justify-between pl-4 pr-4 pt-4">
-                    <h2 className="text-xl font-bold">我的工作流</h2>
-                    {/* Execute Button */}
-                    <button
-                        onClick={executeWorkflow}
-                        className="px-4 py-2 bg-blue-500 text-white rounded"
-                    >
-                        执行工作流
-                    </button>
+                    <div className={"flex"}>
+                        <h2 className="text-xl font-bold">我的工作流</h2>
+                        <h2 className={"text-xl font-bold ml-4"} onClick={changeScene}>未命名</h2>
+                    </div>
+                    <div className={"flex"}>
+                        {
+                            sceneExists ?
+                                <button
+                                    onClick={handleUpdateScene}
+                                    className="px-4 py-2 bg-blue-500 text-white rounded"
+                                >
+                                    更新场景
+                                </button>
+                                :
+                                <button
+                                    onClick={handleCreateScene}
+                                    className="px-4 py-2 bg-blue-500 text-white rounded"
+                                >
+                                    创建场景
+                                </button>
+                        }
+                        {/* Execute Button */}
+                        <button
+                            onClick={executeWorkflow}
+                            className="px-4 py-2 bg-blue-500 text-white rounded ml-4"
+                        >
+                            执行工作流
+                        </button>
+                    </div>
+                </div>
+
+                <div className="w-full h-96 pl-4 pr-4 rounded">
+                    <ReactFlow
+                        nodes={customNodes}
+                        edges={customEdges}
+                        onNodesChange={onNodesChange}
+                        onEdgesChange={onEdgesChange}
+                        onConnect={onConnect}
+                        minZoom={0.5}
+                        maxZoom={2}>
+                        <Background bgColor="#f9f9f9" gap={16} className={"rounded"}/>
+                        <Controls/>
+                    </ReactFlow>
                 </div>
 
                 {/* Input */}
-                <div className="mb-4 pr-4 pl-4">
-                    <label className="block mb-2">输入</label>
+                <div className="mb-4 pr-4 pl-4 mt-4">
+                    <label className="block mb-2 ">输入</label>
                     <input
                         type="text"
                         value={input}
@@ -238,19 +311,7 @@ export default function CenterPanel() {
                 </div>
 
                 {/* Output */}
-                <div className="w-full h-96 pl-4 pr-4">
-                    <ReactFlow
-                        nodes={customNodes}
-                        edges={customEdges}
-                        onNodesChange={onNodesChange}
-                        onEdgesChange={onEdgesChange}
-                        onConnect={onConnect}
-                        minZoom={0.5}
-                        maxZoom={2}>
-                        <Background bgColor="#f9f9f9" gap={16} />
-                        <Controls />
-                    </ReactFlow>
-                </div>
+
             </div>
         </>
     );
