@@ -134,3 +134,54 @@ interface CallAgentData {
     kind: number
     input: string
 }
+
+interface SceneData {
+    [key: string]: any;
+}
+
+const apiRequest = async(endpoint: string, data: SceneData)=> {
+    try {
+        const response = await request.post(endpoint,data);
+        return response.data;
+    }catch (error) {
+        console.error(error);
+        throw error;
+    }
+}
+
+/**
+ * @description 创建场景
+ */
+export const createScene = async(data: SceneData) => {
+    return await apiRequest('/scene/create',data);
+}
+
+/**
+ * @description 更新场景
+ */
+export const updateScene = async(data: SceneData) => {
+    return await apiRequest('/scene/update', data);
+}
+
+/**
+ * @description 删除场景
+ */
+export const deleteScene = async(data: SceneData) => {
+    return await apiRequest('/scene/delete', data);
+}
+
+/**
+ * @description 获取场景列表
+ */
+export const getSceneList = async(data:SceneData) => {
+    return await apiRequest('/scene/list', data);
+}
+
+/**
+ * @description 获取场景详情
+ */
+
+export const getSceneDetail = async(data: SceneData) => {
+    return await apiRequest('/scene/get', data);
+}
+
