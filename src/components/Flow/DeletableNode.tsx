@@ -13,8 +13,8 @@ export default function DeletableNode( {data,deleteNode} ) {
     return (
         <div
             className={`bg-white max-h-18 w-60 py-3 rounded flex justify-center items-center  ${isFocus ? "border-black" : "shadow-gray-300"}`}
-            onMouseEnter={()=>{setIsFocus(true)}}
-            onMouseLeave={()=>{setIsFocus(false)}}
+            onMouseMoveCapture={()=>{setIsFocus(true)}}
+            onMouseOutCapture={()=>{setIsFocus(false)}}
         >
             {
                 data.id === '1' ||

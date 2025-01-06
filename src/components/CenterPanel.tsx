@@ -145,7 +145,7 @@ export default function CenterPanel() {
             return {
                 id: agent.id,
                 data: { label: nodeIcon[agent.kind] + agent.name, id: agent.id },
-                position: { x: (index + 1) * 200, y: index % 2 === 1 ? 0 : 60 },
+                position: { x: (index + 1) * 300, y: index % 2 === 1 ? 0 : 100 },
                 type: 'deletableNode',
             }
         })]
@@ -210,10 +210,14 @@ export default function CenterPanel() {
     const handleDeleteScene = async () => {
         const currentSceneId = sceneList.find(scene => scene.name === sceneName)?.id
         if(!currentSceneId) return
-        const res = await deleteScene(currentSceneId)
+        console.log(currentSceneId)
+        const res = await deleteScene({id :currentSceneId})
         if(res?.code == 0){
             console.log("delete scene success",res)
+            window.location.reload();
+            return
         }
+        console.error(res)
     }
 
     /**
@@ -396,17 +400,29 @@ export default function CenterPanel() {
                     </div>
 
                     <div className={"flex"}>
+                        {
+                            sceneExists &&
+                            <button
+                                onClick={handleDeleteScene}
+                                className="px-4 py-2 bg-gray-100 ml-4 text-red-500 rounded"
+                            >
+                                删除场景
+                            </button>
+                        }
                         {/* 场景选择下拉框 */}
                         <div className="relative">
                             <button
-                                className="px-4 py-2 bg-blue-500 text-white rounded w-30"
+                                className="px-4 py-2 bg-blue-500 text-white rounded w-30 ml-4"
                                 onClick={() => setSceneDropdown(!sceneDropdown)}
                             >
                                 选择场景
                             </button>
                             {
                                 sceneDropdown &&
-                                <div className="absolute px-0 py-2 left-0 mt-2 bg-white rounded z-50 w-34">
+                                <div
+                                    className="absolute px-0 py-2 left-0 mt-2 bg-white rounded z-50 w-34"
+                                    onMouseLeave={()=> setSceneDropdown(false)}
+                                >
                                     {sceneList.map((scene) => (
                                         <div
                                             key={scene.id}

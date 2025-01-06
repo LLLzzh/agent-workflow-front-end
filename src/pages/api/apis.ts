@@ -166,8 +166,8 @@ export const updateScene = async(data: SceneData) => {
 /**
  * @description 删除场景
  */
-export const deleteScene = async(id:string) => {
-    return await apiRequest('/scene/delete', id);
+export const deleteScene = async(data:SceneData) => {
+    return await apiRequest('/scene/delete', data);
 }
 
 /**
