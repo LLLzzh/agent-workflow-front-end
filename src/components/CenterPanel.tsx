@@ -1,21 +1,34 @@
-import { useCallback, useState, useEffect } from 'react'
-import { useDrop } from 'react-dnd'
-import { Agent, callAgent } from '@/pages/api/apis'
+import {useCallback, useEffect, useRef, useState} from 'react'
+import {useDrop} from 'react-dnd'
+import {Agent, callAgent} from '@/pages/api/apis'
 import LeftPanel from "@/components/LeftPanel";
-import { ReactFlow, useNodesState, useEdgesState, addEdge, Controls, Background, applyEdgeChanges, applyNodeChanges, type Node, type Edge, type OnConnect, type OnNodesChange, type OnEdgesChange } from "@xyflow/react";
+import {
+    addEdge,
+    applyEdgeChanges,
+    applyNodeChanges,
+    Background,
+    Controls,
+    type Edge,
+    type Node,
+    type OnConnect,
+    type OnEdgesChange,
+    type OnNodesChange,
+    ReactFlow,
+    useEdgesState,
+    useNodesState,
+    MarkerType
+} from "@xyflow/react";
 import '@xyflow/react/dist/style.css';
-import {useRef} from "react";
 
 // 初始化组件
 export default function CenterPanel() {
-    const [agents,setAgents] = useState<Agent[]>([])
     const [workflowAgents, setWorkflowAgents] = useState<Agent[]>([]); // 用于存储按照顺序排列的工作流
     const [input, setInput] = useState('');
     const [output, setOutput] = useState('');
     const [currentOutput, setCurrentOutput] = useState<{ id: string, content: string }[]>([{ id: '', content: '' }]);
 
     // Agent Nodes
-    const initialNodes: Node[] = [{ id: '1', data: { label: 'start' }, position: { x: 0, y: 0 }, type: 'input' }];
+    const initialNodes: Node[] = [{ id: '1', data: { label: 'start',icon: '🔥' }, position: { x: 0, y: 0 }, sourcePosition:'right', type: 'input' ,style: {border: '3px solid #1e2022'}}];
     const initialEdges: Edge[] = [];
 
     const [nodes, setNodes] = useNodesState(initialNodes);
@@ -29,9 +42,13 @@ export default function CenterPanel() {
         [setEdges],
     );
     const onConnect: OnConnect = useCallback(
-        (params) => setEdges((eds) => addEdge(params, eds)),
+        (params) => {
+            setEdges((eds) => addEdge(params, eds))
+        },
         [setEdges],
     );
+
+    const nodeIcon = ['💬','📈','💻','🎨']
 
     const agentsRef = useRef<Agent[]>([]);
 
@@ -44,7 +61,7 @@ export default function CenterPanel() {
             agentsRef.current = [...agentsRef.current, item];
             setNodes((prevNodes) => [
                 ...prevNodes,
-                { id: item.id, data: { label: item.name }, position: {x: clientOffset.x-700,y: clientOffset.y-300}, type: 'default' }
+                { id: item.id, data: { label: item.name, icon: nodeIcon[item.kind] }, position: {x: clientOffset.x-600,y: clientOffset.y-200}, type: 'default' }
             ]);
 
         },
@@ -53,7 +70,9 @@ export default function CenterPanel() {
         })
     }));
 
-
+    /**
+     * @description 根据 edges 设置WorkflowAgents
+     */
     useEffect(() => {
         const order = getWorkflowOrder(edges);  // 获取顺序
 
@@ -65,7 +84,9 @@ export default function CenterPanel() {
     }, [edges]);
 
 
-    // 执行工作流
+    /**
+     * @description 执行工作流
+      */
     const executeWorkflow = async () => {
         let currentInput = input; // 初始输入
         let finalOutput = ""; // 最终拼接的输出内容
@@ -86,6 +107,11 @@ export default function CenterPanel() {
         setOutput(finalOutput);
     };
 
+    /**
+     * @description 执行单个agent
+     * @param agent
+     * @param input
+     */
     const executeAgent = async (agent: Agent, input: string) => {
         const res = await callAgent({
             id: agent.id,
@@ -121,7 +147,9 @@ export default function CenterPanel() {
         return { content: partialContent };
     };
 
-    // 根据edges输出工作流顺序
+    /**
+     * @description 根据edges输出工作流顺序
+      */
     const getWorkflowOrder = (edges: Edge[]) => {
         // 构建一个图
         const graph: { [key: string]: string[] } = {};
@@ -155,15 +183,39 @@ export default function CenterPanel() {
             return result.reverse(); // 返回的顺序是从开始到结束
         };
 
-        const order = topologicalSort();
-        return order;
+        return topologicalSort();
     };
+
+    /**
+     * @description edges样式更改
+     */
+    const customEdges = edges.map(edge => ({
+        ...edge,
+        markerEnd: {
+            type: MarkerType.ArrowClosed,
+            width: 15,
+            height: 15,
+            color: '#1e2022',
+            },
+        animated: true,
+        style: { stroke: '#1e2022', strokeWidth: 2 }
+    }))
+
+    /**
+     * @description nodes样式更改
+     */
+    const customNodes = nodes.map(node => ({
+        ...node,
+        style: {border: 'none'},
+        sourcePosition: 'right',
+        targetPosition: 'left',
+    }));
 
     return (
         <>
             <LeftPanel workflowAgents={workflowAgents} currentOutput={currentOutput} />
             <div ref={drop} className="flex flex-col p-4 w-2/3">
-                <div className="mb-4">
+                <div className="mb-4 flex justify-between pl-4 pr-4 pt-4">
                     <h2 className="text-xl font-bold">我的工作流</h2>
                     {/* Execute Button */}
                     <button
@@ -175,7 +227,7 @@ export default function CenterPanel() {
                 </div>
 
                 {/* Input */}
-                <div className="mb-4">
+                <div className="mb-4 pr-4 pl-4">
                     <label className="block mb-2">输入</label>
                     <input
                         type="text"
@@ -186,9 +238,16 @@ export default function CenterPanel() {
                 </div>
 
                 {/* Output */}
-                <div className="w-full h-96">
-                    <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} minZoom={0.5} maxZoom={2}>
-                        <Background />
+                <div className="w-full h-96 pl-4 pr-4">
+                    <ReactFlow
+                        nodes={customNodes}
+                        edges={customEdges}
+                        onNodesChange={onNodesChange}
+                        onEdgesChange={onEdgesChange}
+                        onConnect={onConnect}
+                        minZoom={0.5}
+                        maxZoom={2}>
+                        <Background bgColor="#f9f9f9" gap={16} />
                         <Controls />
                     </ReactFlow>
                 </div>

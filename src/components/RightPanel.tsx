@@ -42,11 +42,11 @@ export default function RightPanel({ onAgentAdd }: RightPanelProps) {
         <>
             <CenterPanel agents={agents} />
             <div className="w-1/4 p-4">
-                <div className="flex justify-between items-center mb-4">
+                <div className="flex justify-between items-center mb-4 pt-4">
                     <h2 className="text-xl font-bold">Agent列表</h2>
                     <button
                         onClick={() => setShowAddForm(true)}
-                        className="p-2 bg-green-500 text-white rounded-full"
+                        className="p-2 bg-blue-500 text-white rounded "
                     >
                         +
                     </button>

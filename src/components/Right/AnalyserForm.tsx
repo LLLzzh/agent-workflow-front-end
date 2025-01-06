@@ -14,11 +14,10 @@ export default function AnalyserForm({ formData, setFormData }: { formData: Part
             </div>
             <div className="mb-4">
                 <label className="block mb-2">任务</label>
-                <input
-                    type="text"
+                <textarea
                     value={formData.task || ''}
                     onChange={e => setFormData({ ...formData, task: e.target.value })}
-                    className="w-full p-2 border rounded"
+                    className="w-full p-2 border rounded h-40 "
                 />
             </div>
         </>

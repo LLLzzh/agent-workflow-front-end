@@ -23,7 +23,7 @@ const LeftPanel = ({ workflowAgents, currentOutput }: LeftPnelProps) => {
 
     return (
         <div className="w-1/3 p-4 border-l">
-            <h2 className="text-xl font-bold mb-4">每一步输出</h2>
+            <h2 className="text-xl font-bold mb-4 pt-4">每一步输出</h2>
             <div className="space-y-4">
                 {workflowAgents.length > 0 ? (
                     workflowAgents.map((agent, index) => (
@@ -37,7 +37,7 @@ const LeftPanel = ({ workflowAgents, currentOutput }: LeftPnelProps) => {
                         </div>
                     ))
                 ) : (
-                    <p className="text-gray-500">没有执行的步骤。</p>
+                    <p className="text-gray-500">没有待执行的步骤。</p>
                 )}
             </div>
         </div>
