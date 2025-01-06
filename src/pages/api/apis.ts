@@ -139,7 +139,7 @@ interface SceneData {
     [key: string]: any;
 }
 
-const apiRequest = async(endpoint: string, data: SceneData)=> {
+const apiRequest = async(endpoint: string, data: any)=> {
     try {
         const response = await request.post(endpoint,data);
         return response.data;
@@ -166,8 +166,8 @@ export const updateScene = async(data: SceneData) => {
 /**
  * @description 删除场景
  */
-export const deleteScene = async(data: SceneData) => {
-    return await apiRequest('/scene/delete', data);
+export const deleteScene = async(id:string) => {
+    return await apiRequest('/scene/delete', id);
 }
 
 /**
@@ -185,3 +185,10 @@ export const getSceneDetail = async(data: SceneData) => {
     return await apiRequest('/scene/get', data);
 }
 
+export interface Scene {
+    id: string
+    name: string
+    update_time: string
+    create_time: string
+    agents: Agent[]
+}
